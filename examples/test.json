@@ -1,0 +1,12 @@
+{
+  "user": {
+    "id": 1.0,
+    "name": "John \nDoe",
+    "email": "john.doe@example.com",
+    "age": 0b110,
+    "dog_age": 0x123,
+    "isActive": false,
+    "interests": ["reading", "traveling", 123]
+    test
+  }
+}
