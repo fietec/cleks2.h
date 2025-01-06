@@ -72,14 +72,25 @@ CleksConfig JsonConfig = {
 	.flags = CLEKS_FLAGS_ALL 
 };
 
-char* json_print_string(CleksToken token)
+void json_print(CleksToken token)
 {
-	CleksTokenIndex index = cleks_token_index(token.id);
-	switch (cleks_token_type(token.id)){
-		case CLEKS_WORD: return JsonWordNames[index];
-		case CLEKS_SYMBOL: return JsonSymbolNames[index];
-		default: return "";
+    if (token.loc.filename != NULL) printf("%s:", token.loc.filename);
+    CleksTokenType type = cleks_token_type(token.id);
+    CleksTokenIndex index = cleks_token_index(token.id);
+    printf("%d:%d %s: ", token.loc.row, token.loc.column, cleks_token_type_name(type));
+	cleks_assert(type < CLEKS_TOKEN_TYPE_COUNT, "Invalid token type: %u!", type);
+	switch(type){
+		case CLEKS_WORD: printf("%s", JsonWordNames[index]); break;
+		case CLEKS_SYMBOL: printf("%s", JsonSymbolNames[index]); break;
+		case CLEKS_STRING: printf("\"%.*s\"", token.end-token.start, token.start); break;
+		case CLEKS_INTEGER:
+		case CLEKS_FLOAT: 
+		case CLEKS_HEX: 
+		case CLEKS_BIN: printf("%.*s", token.end-token.start, token.start); break;
+		case CLEKS_UNKNOWN: printf("<%.*s>", token.end-token.start, token.start); break;
+		default: cleks_error("Uninplemented type in json_print: %s", cleks_token_type_name(type)); exit(1);
 	}
+    putchar('\n');
 }
 
 int main(int argc, char **argv)
@@ -87,18 +98,11 @@ int main(int argc, char **argv)
 	cleks_assert(argc == 2, "Not enough parameters provided!");
 	char *filename = argv[1];
 	char *file_content = read_entire_file(filename);
-	Clekser clekser = Cleks_create(file_content, strlen(file_content), JsonConfig, filename);
-	
+	Clekser clekser = Cleks_create(file_content, strlen(file_content), JsonConfig, filename, json_print);
 	CleksToken token;
 	
 	while (Cleks_next(&clekser, &token)){
-		switch(cleks_token_type(token.id)){
-			case CLEKS_WORD:
-			case CLEKS_SYMBOL:{
-				printf("%s:%d:%d %s: %s\n", token.loc.filename, token.loc.row, token.loc.column, cleks_token_type_name(cleks_token_type(token.id)), json_print_string(token));
-			}break;
-			default: Cleks_print(token);
-		}
+		Cleks_print(clekser, token);
 	}
 	// free(buffer);
 	return 0;

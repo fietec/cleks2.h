@@ -106,6 +106,8 @@ typedef struct{
 	char *end;
 } CleksToken;
 
+typedef void (*CleksPrintFn) (CleksToken);
+
 typedef struct{
 	char *start_del;
 	char *end_del;
@@ -136,16 +138,18 @@ typedef struct{
 	CleksLoc loc;
 	size_t index;
 	CleksConfig config;
+    CleksPrintFn print_fn;
 } Clekser;
 
-/* Function declerations */
+/* Function declarations */
 
 // 'public' functions
-Clekser Cleks_create(char *buffer, size_t buffer_size, CleksConfig config, char *filename);
+Clekser Cleks_create(char *buffer, size_t buffer_size, CleksConfig config, char *filename, CleksPrintFn print_fn);
 bool Cleks_next(Clekser *clekser, CleksToken *token);
-bool Cleks_expect(Clekser *clekser, CleksToken *token, CleksTokenType type, uint32_t id);
+bool Cleks_expect(Clekser *clekser, CleksToken *token, CleksTokenID id);
 bool Cleks_extract(CleksToken *token, char *buffer, size_t buffer_size);
-void Cleks_print(CleksToken token);
+void Cleks_print(Clekser clekser, CleksToken token);
+void Cleks_print_default(CleksToken token);
 
 // 'private' functions
 void Cleks__trim_left(Clekser *clekser);
@@ -160,7 +164,6 @@ bool Cleks__str_is_float(char *s, char *e);
 bool Cleks__str_is_int(char *s, char *e);
 bool Cleks__str_is_hex(char *s, char *e);
 bool Cleks__str_is_bin(char *s, char *e);
-void Cleks__print_default(CleksToken token);
 
 #endif // _CLEKS_H
 
@@ -171,10 +174,10 @@ void Cleks__print_default(CleksToken token);
 
 #ifdef CLEKS_IMPLEMENTATION
 
-Clekser Cleks_create(char *buffer, size_t buffer_size, CleksConfig config, char *filename)
+Clekser Cleks_create(char *buffer, size_t buffer_size, CleksConfig config, char *filename, CleksPrintFn print_fn)
 {
 	cleks_assert(buffer != NULL, "Invalid parameter buffer:%p", buffer);
-	return (Clekser) {.buffer = buffer, .buffer_size=buffer_size, .loc=(CleksLoc){1, 1, filename}, .index=0, .config=config};
+	return (Clekser) {.buffer = buffer, .buffer_size=buffer_size, .loc=(CleksLoc){1, 1, filename}, .index=0, .config=config, .print_fn=print_fn};
 }
 
 bool Cleks_next(Clekser *clekser, CleksToken *token)
@@ -294,10 +297,12 @@ bool Cleks_next(Clekser *clekser, CleksToken *token)
 	return false;
 }
 
-bool Cleks_expect(Clekser *clekser, CleksToken *token, CleksTokenType type, CleksTokenIndex index)
+bool Cleks_expect(Clekser *clekser, CleksToken *token, CleksTokenID id)
 {
 	CleksToken t_token;
 	if (!Cleks_next(clekser, &t_token)) return false;
+    CleksTokenType type = cleks_token_type(id);
+    CleksTokenIndex index = cleks_token_index(id);
 	if (cleks_token_type(t_token.id) != type || (index != CLEKS_ANY_ID && cleks_token_index(t_token.id) != index)){
 		cleks_error("Expected: %s:%d, but got %s:%d!", cleks_token_type_name(type), (index == CLEKS_ANY_ID ? 0 : index), cleks_token_type_name(cleks_token_type(t_token.id)), cleks_token_index(t_token.id));
 		return false;
@@ -350,10 +355,12 @@ bool Cleks_extract(CleksToken *token, char *buffer, size_t buffer_size)
 	return true;
 }
 
-void Cleks__print_default(CleksToken token)
+void Cleks_print_default(CleksToken token)
 {
 	// TODO: probably best to do this with string builders instead
+    if (token.loc.filename != NULL) printf("%s:", token.loc.filename);
 	CleksTokenType type = cleks_token_type(token.id);
+	printf("%d:%d %s: ", token.loc.row, token.loc.column, cleks_token_type_name(type));
 	cleks_assert(type < CLEKS_TOKEN_TYPE_COUNT, "Invalid token type: %u!", type);
 	switch(type){
 		case CLEKS_WORD:
@@ -366,14 +373,17 @@ void Cleks__print_default(CleksToken token)
 		case CLEKS_UNKNOWN: printf("<%.*s>", token.end-token.start, token.start); break;
 		default: cleks_error("Uninplemented type in print: %s", cleks_token_type_name(type)); exit(1);
 	}
+    putchar('\n');
 }
 
-void Cleks_print(CleksToken token)
+void Cleks_print(Clekser clekser, CleksToken token)
 {
-	if (token.loc.filename != NULL) printf("%s:", token.loc.filename);
-	printf("%d:%d %s: ", token.loc.row, token.loc.column, cleks_token_type_name(cleks_token_type(token.id)));
-	Cleks__print_default(token);
-	putchar('\n');
+	if (clekser.print_fn != NULL){
+        clekser.print_fn(token);
+    }
+    else{
+        Cleks_print_default(token);
+    }
 }
 
 void Cleks__trim_left(Clekser *clekser)
