@@ -52,12 +52,12 @@
 
 /* User macros */
 // #define cleks_token_type(token) (CleksTokenTypeNames[(uint64_t)(token)])
-#define cleks_token_type(token) ((uint64_t) ((token).id) >> 32)
-#define cleks_token_type_name(type) (CleksTokenTypeNames[(type)])
-#define cleks_token_id(token) (uint32_t)(token).id
+#define cleks_token_type(id) ((CleksTokenType) (((CleksTokenID)(id)) >> 32))
+#define cleks_token_type_name(type) (CleksTokenTypeNames[(CleksTokenID)(type)])
+#define cleks_token_index(id) (CleksTokenIndex)((id) & 0xFFFFFFFF)
+#define cleks_token(type, index) ((CleksTokenID) ((CleksTokenID) (type) << 32) | ((CleksTokenIndex)(index)))
 #define cleks_token_value(token) (token).start
 #define cleks_token_value_length(token) ((token).end - (token).start)
-#define cleks_token(type, id) ((CleksTokenID) ((uint64_t) type) << 32)
 
 #define CLEKS_ANY_ID 0xFFFFFFFF
 
@@ -97,6 +97,7 @@ typedef struct{
 } CleksLoc;
 
 typedef uint64_t CleksTokenID;
+typedef uint32_t CleksTokenIndex;
 
 typedef struct{
 	CleksTokenID id;
@@ -293,12 +294,12 @@ bool Cleks_next(Clekser *clekser, CleksToken *token)
 	return false;
 }
 
-bool Cleks_expect(Clekser *clekser, CleksToken *token, CleksTokenType type, uint32_t id)
+bool Cleks_expect(Clekser *clekser, CleksToken *token, CleksTokenType type, CleksTokenIndex index)
 {
 	CleksToken t_token;
 	if (!Cleks_next(clekser, &t_token)) return false;
-	if (cleks_token_type(t_token) != type || (id != CLEKS_ANY_ID && cleks_token_id(t_token) != id)){
-		cleks_error("Expected: %s:%d, but got %s:%d!", cleks_token_type_name(type), (id == CLEKS_ANY_ID ? 0 : id), cleks_token_type_name(cleks_token_type(t_token)), cleks_token_id(t_token));
+	if (cleks_token_type(t_token.id) != type || (index != CLEKS_ANY_ID && cleks_token_index(t_token.id) != index)){
+		cleks_error("Expected: %s:%d, but got %s:%d!", cleks_token_type_name(type), (index == CLEKS_ANY_ID ? 0 : index), cleks_token_type_name(cleks_token_type(t_token.id)), cleks_token_index(t_token.id));
 		return false;
 	}
 	memcpy(token, &t_token, sizeof(CleksToken));
@@ -310,7 +311,7 @@ bool Cleks_extract(CleksToken *token, char *buffer, size_t buffer_size)
 	if (token == NULL || buffer == NULL) return false;
 	size_t value_len = token->end - token->start;
 	if (value_len >= buffer_size) return false;
-	if (cleks_token_type(*token) == CLEKS_STRING){
+	if (cleks_token_type(token->id) == CLEKS_STRING){
 		char temp_buffer[value_len+1];
 		memset(temp_buffer, 0, value_len+1);
 		char *pr = token->start;
@@ -352,7 +353,7 @@ bool Cleks_extract(CleksToken *token, char *buffer, size_t buffer_size)
 void Cleks__print_default(CleksToken token)
 {
 	// TODO: probably best to do this with string builders instead
-	CleksTokenType type = cleks_token_type(token);
+	CleksTokenType type = cleks_token_type(token.id);
 	cleks_assert(type < CLEKS_TOKEN_TYPE_COUNT, "Invalid token type: %u!", type);
 	switch(type){
 		case CLEKS_WORD:
@@ -370,7 +371,7 @@ void Cleks__print_default(CleksToken token)
 void Cleks_print(CleksToken token)
 {
 	if (token.loc.filename != NULL) printf("%s:", token.loc.filename);
-	printf("%d:%d %s: ", token.loc.row, token.loc.column, cleks_token_type_name(cleks_token_type(token)));
+	printf("%d:%d %s: ", token.loc.row, token.loc.column, cleks_token_type_name(cleks_token_type(token.id)));
 	Cleks__print_default(token);
 	putchar('\n');
 }
@@ -416,11 +417,11 @@ void Cleks__find_char(Clekser *clekser, char del)
 	}
 }
 
-void Cleks__set_token(CleksToken *token, uint32_t type, uint32_t id, CleksLoc loc, char *start, char *end)
+void Cleks__set_token(CleksToken *token, uint32_t type, uint32_t index, CleksLoc loc, char *start, char *end)
 {
 	cleks_assert(token != NULL, "Invalid argument token:%p", token);
 	// cleks_debug("Setting token: %s", cleks_token_type(type));
-	token->id = ((uint64_t) type << 32) | id;
+	token->id = cleks_token(type, index);
 	token->loc = loc;
 	token->start = start;
 	token->end = end;

@@ -1,6 +1,6 @@
 #define CLEKS_IMPLEMENTATION
 #include "utils.h"
-#include "cleks2.h"
+#include "../cleks2.h"
 #include <stdio.h>
 
 typedef enum{
@@ -69,15 +69,15 @@ CleksConfig JsonConfig = {
 	.string_count = CLEKS_ARR_LEN(JsonStrings),
 	.whitespaces = JsonWhitespaces,
 	.whitespace_count = CLEKS_ARR_LEN(JsonWhitespaces),
-	.flags = CLEKS_FLAGS_INTEGERS | CLEKS_FLAGS_FLOATS | CLEKS_FLAGS_NO_UNKNOWN
+	.flags = CLEKS_FLAGS_ALL 
 };
 
 char* json_print_string(CleksToken token)
 {
-	uint32_t id = cleks_token_id(token);
-	switch (cleks_token_type(token)){
-		case CLEKS_WORD: return JsonWordNames[id];
-		case CLEKS_SYMBOL: return JsonSymbolNames[id];
+	CleksTokenIndex index = cleks_token_index(token.id);
+	switch (cleks_token_type(token.id)){
+		case CLEKS_WORD: return JsonWordNames[index];
+		case CLEKS_SYMBOL: return JsonSymbolNames[index];
 		default: return "";
 	}
 }
@@ -92,10 +92,10 @@ int main(int argc, char **argv)
 	CleksToken token;
 	
 	while (Cleks_next(&clekser, &token)){
-		switch(cleks_token_type(token)){
+		switch(cleks_token_type(token.id)){
 			case CLEKS_WORD:
 			case CLEKS_SYMBOL:{
-				printf("%s:%d:%d %s: %s\n", token.loc.filename, token.loc.row, token.loc.column, cleks_token_type_name(cleks_token_type(token)), json_print_string(token));
+				printf("%s:%d:%d %s: %s\n", token.loc.filename, token.loc.row, token.loc.column, cleks_token_type_name(cleks_token_type(token.id)), json_print_string(token));
 			}break;
 			default: Cleks_print(token);
 		}
