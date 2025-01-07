@@ -1,5 +1,5 @@
 # cleks2.h
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/fietec/cleks.h/blob/master/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/fietec/cleks2.h/blob/master/LICENSE)
 
 `cleks2.h` is a highly customizable header-only lexer written in C.
 It is the second iteration of [cleks.h](https://github.com/fietec/cleks.h).
@@ -91,7 +91,7 @@ The created `CleksConfig` struct is simply assinged to a `Clekser` via `Cleks_cr
 - `CLEKS_FLAGS_ALL` : enable all the above
 - `CLEKS_FLAGS_NO_UNKNOWN` : don't allow unknown tokens
 
-### Running
+### Extracting tokens
 To begin extracting tokens, start calling [Cleks_next](#functions) in a loop. With each iteration, the lexer will try to find a new token and set the provided [CleksToken](#tokens) accordingly, returning *true* on success.
 If an error occures or when the end of the buffer is reached *false* is returned.
 
@@ -101,6 +101,12 @@ while (Cleks_next(&clekser, &token)){
     // do something with the token
 }
 // lexing finished
+```
+
+### Expecting tokens 
+You can expect a certain token using
+```c 
+bool Cleks_expect(Clekser *clekser, CleksToken *token, CleksTokenID id);
 ```
 
 ## API

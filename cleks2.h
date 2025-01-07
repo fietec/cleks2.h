@@ -59,7 +59,7 @@
 #define cleks_token_value(token) (token).start
 #define cleks_token_value_length(token) ((token).end - (token).start)
 
-#define CLEKS_ANY_ID 0xFFFFFFFF
+#define CLEKS_ANY_INDEX 0xFFFFFFFF
 
 /* Type definitions */
 typedef const char CleksSymbol;
@@ -70,6 +70,7 @@ typedef enum{
 	CLEKS_WORD,
 	CLEKS_SYMBOL,
 	CLEKS_STRING,
+    CLEKS_FIELD,
 	CLEKS_INTEGER,
 	CLEKS_FLOAT,
 	CLEKS_HEX,
@@ -82,12 +83,14 @@ const char* CleksTokenTypeNames[] = {
 	[CLEKS_WORD] = "Word",
 	[CLEKS_SYMBOL] "Symbol",
 	[CLEKS_STRING] = "String",
+    [CLEKS_FIELD] = "Field",
 	[CLEKS_INTEGER] = "Int",
 	[CLEKS_FLOAT] = "Float",
 	[CLEKS_HEX] = "Hex",
 	[CLEKS_BIN] = "Bin",
 	[CLEKS_UNKNOWN] = "Unknown"
 };
+
 _Static_assert(CLEKS_TOKEN_TYPE_COUNT == CLEKS_ARR_LEN(CleksTokenTypeNames), "CleksTokenTypeNames out of sync !");
 
 typedef struct{
@@ -119,14 +122,21 @@ typedef struct{
 } CleksString;
 
 typedef struct{
+    char *prefix;
+    char *suffix;
+} CleksField;
+
+typedef struct{
 	CleksWord *words;
 	size_t word_count;
 	CleksSymbol *symbols;
 	size_t symbol_count;
-	CleksComment *comments;
-	size_t comment_count;
 	CleksString *strings;
 	size_t string_count;
+    CleksField *fields;
+    size_t field_count;
+	CleksComment *comments;
+	size_t comment_count;
 	CleksWhitespace *whitespaces;
 	size_t whitespace_count;
 	uint8_t flags;
@@ -188,15 +198,12 @@ bool Cleks_next(Clekser *clekser, CleksToken *token)
 		if (clekser->index >= clekser->buffer_size) return false;
 		// skip spaces
 		Cleks__trim_left(clekser);
-		cleks_debug("Position after trim: %d:%d", clekser->loc.row, clekser->loc.column);
 		if (clekser->index >= clekser->buffer_size) return false;
 		// skip comments
 		bool comment_found = false;
 		for (size_t i=0; i<clekser->config.comment_count; ++i){
 			CleksComment comment = clekser->config.comments[i];
-			cleks_debug("Looking for comment '%s'", comment.start_del);
 			if (Cleks__starts_with(clekser, comment.start_del)){
-				cleks_debug("Found Comment: '%s'", comment.start_del);
 				Cleks__skip_string(clekser, comment.start_del);
 				Cleks__find_string(clekser, comment.end_del);
 				Cleks__skip_string(clekser, comment.end_del);
@@ -208,7 +215,6 @@ bool Cleks_next(Clekser *clekser, CleksToken *token)
 	}
 	// zero-initialize the token
 	memset(token, 0, sizeof(*token));
-	cleks_debug("Trying to lex string");
 	// try to lex string
 	for (size_t i=0; i<clekser->config.string_count; ++i){
 		CleksString string = clekser->config.strings[i];
@@ -219,13 +225,11 @@ bool Cleks_next(Clekser *clekser, CleksToken *token)
 			char *p_start = clekser__get_pointer(clekser);
 			Cleks__find_char(clekser, string.end_del);
 			char *p_end = clekser__get_pointer(clekser);
-			Cleks__set_token(token, CLEKS_STRING, 0, start_loc, p_start, p_end); 
-			// printf("Found String at (%d, %d) with length %d, index is %d\n", clekser->loc.row, clekser->loc.column, p_end-p_start,clekser->index);
+			Cleks__set_token(token, CLEKS_STRING, i, start_loc, p_start, p_end); 
 			clekser_inc(clekser);
 			return true;
 		}
 	}
-	cleks_debug("Trying to lex symbol");
 	// try to lex symbols
 	for (size_t i=0; i<clekser->config.symbol_count; ++i){
 		if (clekser__get_char(clekser) == clekser->config.symbols[i]){
@@ -236,15 +240,32 @@ bool Cleks_next(Clekser *clekser, CleksToken *token)
 			return true;
 		}
 	}
-	// TODO: try to lex words
-	cleks_debug("Trying to lex word");
+    cleks_debug("before fields");
+    
+    // lex fields
+    for (size_t i=0; i<clekser->config.field_count; ++i){
+        CleksField field = clekser->config.fields[i];
+        cleks_debug("looking for %s (%d)", field.prefix, clekser->config.field_count);
+        if (Cleks__starts_with(clekser, field.prefix)){
+            Cleks__skip_string(clekser, field.prefix);
+            char *p_start = clekser__get_pointer(clekser);
+            CleksLoc loc = clekser->loc;
+            Cleks__find_string(clekser, field.suffix);
+            char *p_end = clekser__get_pointer(clekser);
+            Cleks__skip_string(clekser, field.suffix);
+            Cleks__set_token(token, CLEKS_FIELD, 0, loc, p_start, p_end);
+            return true;
+        }
+    }
+    
+    cleks_debug("before words");
+    
 	char *p_start = clekser__get_pointer(clekser);
 	CleksLoc start_loc = clekser->loc;
 	char c;
 	while (true){
 		c = clekser__get_char(clekser);
 		if (Cleks__is_symbol(clekser, c) || Cleks__is_whitespace(clekser, c) || cleks__is_special(c)) break;
-		cleks_debug("Char is not end condition");
 		bool delimeter_found = false;
 		for (size_t i=0; i<clekser->config.string_count; ++i){
 			if (c == clekser->config.strings[i].start_del){
@@ -260,18 +281,22 @@ bool Cleks_next(Clekser *clekser, CleksToken *token)
 			}
 		}
 		if (delimeter_found) break;
+        for (size_t i=0; i<clekser->config.field_count; ++i){
+            if (Cleks__starts_with(clekser, clekser->config.fields[i].prefix)){
+                delimeter_found = true;
+                break;
+            }
+        }
+        if (delimeter_found) break;
 		clekser_inc(clekser);
 	}
 	char *p_end = clekser__get_pointer(clekser);
-	cleks_debug("Found end, length=%d", p_end-p_start);
 	for (size_t i=0; i<clekser->config.word_count; ++i){
-		cleks_debug("Comparing against '%s'", clekser->config.words[i]);
 		if (memcmp(p_start, clekser->config.words[i], p_end-p_start) == 0){
 			Cleks__set_token(token, CLEKS_WORD, i, start_loc, p_start, p_end);
 			return true;
 		}
 	}
-	cleks_debug("Trying to lex nums");
 	// no matching words found
 	if ((clekser->config.flags & CLEKS_FLAGS_INTEGERS) && Cleks__str_is_int(p_start, p_end)){
 		Cleks__set_token(token, CLEKS_INTEGER, 0, start_loc, p_start, p_end);
@@ -303,8 +328,8 @@ bool Cleks_expect(Clekser *clekser, CleksToken *token, CleksTokenID id)
 	if (!Cleks_next(clekser, &t_token)) return false;
     CleksTokenType type = cleks_token_type(id);
     CleksTokenIndex index = cleks_token_index(id);
-	if (cleks_token_type(t_token.id) != type || (index != CLEKS_ANY_ID && cleks_token_index(t_token.id) != index)){
-		cleks_error("Expected: %s:%d, but got %s:%d!", cleks_token_type_name(type), (index == CLEKS_ANY_ID ? 0 : index), cleks_token_type_name(cleks_token_type(t_token.id)), cleks_token_index(t_token.id));
+	if (cleks_token_type(t_token.id) != type || (index != CLEKS_ANY_INDEX && cleks_token_index(t_token.id) != index)){
+		cleks_error("Expected: %s:%d, but got %s:%d!", cleks_token_type_name(type), (index == CLEKS_ANY_INDEX ? 0 : index), cleks_token_type_name(cleks_token_type(t_token.id)), cleks_token_index(t_token.id));
 		return false;
 	}
 	memcpy(token, &t_token, sizeof(CleksToken));
@@ -365,6 +390,7 @@ void Cleks_print_default(CleksToken token)
 	switch(type){
 		case CLEKS_WORD:
 		case CLEKS_SYMBOL: printf("'%.*s'", token.end-token.start, token.start); break;
+        case CLEKS_FIELD:
 		case CLEKS_STRING: printf("\"%.*s\"", token.end-token.start, token.start); break;
 		case CLEKS_INTEGER:
 		case CLEKS_FLOAT: 
@@ -413,7 +439,17 @@ void Cleks__find_string(Clekser *clekser, char *del)
 		clekser__check_line(clekser);
 		clekser->index++;
 	}
-	cleks_debug("Found %s at %d:%d", del, clekser->loc.row, clekser->loc.column);
+}
+
+void Cleks__try_find_string(Clekser *clekser, char *del)
+{
+    // TODO: account for strings and comments
+    cleks_assert(clekser != NULL && del != NULL, "Invalid argumens clekser:%p, del:%p", clekser, del);
+    while (!Cleks__starts_with(clekser, del)){
+        cleks_assert(clekser->index < clekser->buffer_size, "OutOfBounce! Could not find \"%s\"", del);
+		clekser__check_line(clekser);
+		clekser->index++;
+    }
 }
 
 void Cleks__find_char(Clekser *clekser, char del)
@@ -430,7 +466,6 @@ void Cleks__find_char(Clekser *clekser, char del)
 void Cleks__set_token(CleksToken *token, uint32_t type, uint32_t index, CleksLoc loc, char *start, char *end)
 {
 	cleks_assert(token != NULL, "Invalid argument token:%p", token);
-	// cleks_debug("Setting token: %s", cleks_token_type(type));
 	token->id = cleks_token_id(type, index);
 	token->loc = loc;
 	token->start = start;
@@ -458,7 +493,6 @@ bool Cleks__is_symbol(Clekser *clekser, char c)
 bool Cleks__starts_with(Clekser *clekser, char *str)
 {
 	cleks_assert(clekser != NULL, "Invalid arguments clekser:%p, str:%p", clekser, str);
-	cleks_debug("Starts_with ('%s'): Arguments valid", str);
 	char *curr = clekser->buffer + clekser->index;
 	for (size_t i=0; i<strlen(str); ++i, ++curr){
 		if (clekser->index + i >= clekser->buffer_size || *curr != *(str+i)) return false;
