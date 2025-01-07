@@ -1,4 +1,6 @@
 # cleks2.h
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/fietec/cleks.h/blob/master/LICENSE)
+
 `cleks2.h` is a highly customizable header-only lexer written in C.
 It is the second iteration of [cleks.h](https://github.com/fietec/cleks.h).
 
@@ -126,7 +128,7 @@ typedef struct{
 } CleksToken;
 ```
 Fields:
-- `id` : [CleksTokenTypeID] a 64-bit integer encoding the [CleksTokenType](#api-type) and [CleksTokenIndex](#api-index)
+- `id` : [CleksTokenTypeID] a 64-bit integer encoding the [CleksTokenType](#token-type) and [CleksTokenIndex](#token-index)
 - `loc` : [[CleksLoc](#token-loc)] a structure containing information about the location of a token in the buffer
 - `start` : [char*] the pointer to the starting point of the token in the buffer
 - `end` : [char*] the pointer to the end point of the token in the buffer
@@ -137,10 +139,10 @@ The `CleksTokenType` of a token is one of the following:
 - `CLEKS_SYMBOL`
 - `CLEKS_STRING`
 - `CLEKS_UNKNOWN` (an unknown word, can be disabled via the `CLEKS_FLAGS_NO_UNKNOWN` flags)
-- `CLEKS_INTEGER` (needs to be enabled via the `CLEKS_FLAGS_INTEGERS` or `CLEKS_FLAGS_ALL` flags)
-- `CLEKS_FLOATS` (needs to be enabled via the `CLEKS_FLAGS_FLOATS` or `CLEKS_FLAGS_ALL` flags)
-- `CLEKS_HEX` (needs to be enabled via the `CLEKS_FLAGS_HEX` or `CLEKS_FLAGS_ALL` flags)
-- `CLEKS_BIN` (needs to be enabled via the `CLEKS_FLAGS_BIN` or `CLEKS_FLAGS_ALL` flags)
+- `CLEKS_INTEGER` (has to be enabled via the `CLEKS_FLAGS_INTEGERS` or `CLEKS_FLAGS_ALL` flags)
+- `CLEKS_FLOATS` (has to be enabled via the `CLEKS_FLAGS_FLOATS` or `CLEKS_FLAGS_ALL` flags)
+- `CLEKS_HEX` (has to be enabled via the `CLEKS_FLAGS_HEX` or `CLEKS_FLAGS_ALL` flags)
+- `CLEKS_BIN` (has to be enabled via the `CLEKS_FLAGS_BIN` or `CLEKS_FLAGS_ALL` flags)
 
 The token type can be obtained via:
 ```c 
@@ -158,7 +160,7 @@ It can be obtained via:
 ```c 
 CleksTokenIndex index = cleks_token_index(token.id);
 ```
-For example given an array or `CleksWord`s: `{"do", "if", "else"}`
+For example given an array of `CleksWord`s: `{"do", "if", "else"}`
 if the lexer comes upon "if" in the buffer the corresponding token will be of type `CLEKS_WORD` and index `1`.
 
 #### Token loc
