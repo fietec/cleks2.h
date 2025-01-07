@@ -55,7 +55,7 @@
 #define cleks_token_type(id) ((CleksTokenType) (((CleksTokenID)(id)) >> 32))
 #define cleks_token_type_name(type) (CleksTokenTypeNames[(CleksTokenID)(type)])
 #define cleks_token_index(id) (CleksTokenIndex)((id) & 0xFFFFFFFF)
-#define cleks_token(type, index) ((CleksTokenID) ((CleksTokenID) (type) << 32) | ((CleksTokenIndex)(index)))
+#define cleks_token_id(type, index) ((CleksTokenID) ((CleksTokenID) (type) << 32) | ((CleksTokenIndex)(index)))
 #define cleks_token_value(token) (token).start
 #define cleks_token_value_length(token) ((token).end - (token).start)
 
@@ -431,7 +431,7 @@ void Cleks__set_token(CleksToken *token, uint32_t type, uint32_t index, CleksLoc
 {
 	cleks_assert(token != NULL, "Invalid argument token:%p", token);
 	// cleks_debug("Setting token: %s", cleks_token_type(type));
-	token->id = cleks_token(type, index);
+	token->id = cleks_token_id(type, index);
 	token->loc = loc;
 	token->start = start;
 	token->end = end;
