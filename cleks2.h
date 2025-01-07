@@ -240,12 +240,10 @@ bool Cleks_next(Clekser *clekser, CleksToken *token)
 			return true;
 		}
 	}
-    cleks_debug("before fields");
     
     // lex fields
     for (size_t i=0; i<clekser->config.field_count; ++i){
         CleksField field = clekser->config.fields[i];
-        cleks_debug("looking for %s (%d)", field.prefix, clekser->config.field_count);
         if (Cleks__starts_with(clekser, field.prefix)){
             Cleks__skip_string(clekser, field.prefix);
             char *p_start = clekser__get_pointer(clekser);
@@ -253,12 +251,10 @@ bool Cleks_next(Clekser *clekser, CleksToken *token)
             Cleks__find_string(clekser, field.suffix);
             char *p_end = clekser__get_pointer(clekser);
             Cleks__skip_string(clekser, field.suffix);
-            Cleks__set_token(token, CLEKS_FIELD, 0, loc, p_start, p_end);
+            Cleks__set_token(token, CLEKS_FIELD, i, loc, p_start, p_end);
             return true;
         }
     }
-    
-    cleks_debug("before words");
     
 	char *p_start = clekser__get_pointer(clekser);
 	CleksLoc start_loc = clekser->loc;
