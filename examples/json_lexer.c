@@ -69,7 +69,7 @@ CleksConfig JsonConfig = {
 	.comment_count = CLEKS_ARR_LEN(JsonComments),
 	.whitespaces = JsonWhitespaces,
 	.whitespace_count = CLEKS_ARR_LEN(JsonWhitespaces),
-	.flags = CLEKS_FLAGS_ALL 
+	.flags = CLEKS_FLAGS_ALL_NUMS | CLEKS_FLAGS_DISABLE_UNKNOWN
 };
 
 void json_print(CleksToken token)

@@ -14,7 +14,7 @@ CleksConfig xml_config = {
     .field_count = CLEKS_ARR_LEN(xml_fields),
     .whitespaces = xml_whitespaces,
     .whitespace_count = CLEKS_ARR_LEN(xml_whitespaces),
-    .flags = CLEKS_FLAGS_ALL
+    .flags = CLEKS_FLAGS_ALL_NUMS
 };
 
 int main(int argc, char **argv)
@@ -28,5 +28,6 @@ int main(int argc, char **argv)
     while (Cleks_next(&clekser, &token)){
         Cleks_print(clekser, token);
     }
+    free(content);
     return 0;
 }

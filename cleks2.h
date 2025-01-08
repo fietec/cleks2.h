@@ -22,12 +22,13 @@
 #define CLEKS_ANSI_RGB(r, g, b) ("\e[38;2;" #r ";" #g ";" #b "m") // set ansi color to rgb value
 #define CLEKS_VALUE_FORMAT "%.*s"
 
-#define CLEKS_FLAGS_ALL 0xf
+#define CLEKS_FLAGS_ALL_NUMS 0xf
 #define CLEKS_FLAGS_INTEGERS 0x1
 #define CLEKS_FLAGS_FLOATS 0x2
 #define CLEKS_FLAGS_HEX 0x4
 #define CLEKS_FLAGS_BIN 0x8
-#define CLEKS_FLAGS_NO_UNKNOWN 0x10
+#define CLEKS_FLAGS_KEEP_UNKNOWN 0x10
+#define CLEKS_FLAGS_DISABLE_UNKNOWN 0x20
 
 #define CLEKS_NO_LOC (CleksLoc) {0}
 
@@ -302,16 +303,16 @@ bool Cleks_next(Clekser *clekser, CleksToken *token)
 		Cleks__set_token(token, CLEKS_FLOAT, 0, start_loc, p_start, p_end);
 		return true;
 	}
-	if ((clekser->config.flags & CLEKS_FLAGS_HEX) && Cleks__str_is_hex(p_start, p_end)){
-		Cleks__set_token(token, CLEKS_HEX, 0, start_loc, p_start, p_end);
-		return true;
-	}
-	if ((clekser->config.flags & CLEKS_FLAGS_BIN) && Cleks__str_is_bin(p_start, p_end)){
-		Cleks__set_token(token, CLEKS_BIN, 0, start_loc, p_start, p_end);
-		return true;
-	}
-	if ((clekser->config.flags & CLEKS_FLAGS_NO_UNKNOWN) == 0){
-		Cleks__set_token(token, CLEKS_UNKNOWN, 0, start_loc, p_start, p_end);
+    if ((clekser->config.flags & CLEKS_FLAGS_HEX) && Cleks__str_is_hex(p_start, p_end)){
+        Cleks__set_token(token, CLEKS_HEX, 0, start_loc, p_start, p_end);
+        return true;
+    }
+    if ((clekser->config.flags & CLEKS_FLAGS_BIN) && Cleks__str_is_bin(p_start, p_end)){
+        Cleks__set_token(token, CLEKS_BIN, 0, start_loc, p_start, p_end);
+        return true;
+    }
+	if ((clekser->config.flags & CLEKS_FLAGS_DISABLE_UNKNOWN) == 0){
+		Cleks__set_token(token, CLEKS_UNKNOWN, (clekser->config.flags & CLEKS_FLAGS_KEEP_UNKNOWN)? 1:0, start_loc, p_start, p_end);
 		return true;
 	}
 	cleks_error("Unknown word found (flags: %d) at %s:%d:%d \"%.*s\"\n", clekser->config.flags, start_loc.filename, start_loc.row, start_loc.column, p_end-p_start, p_start);
@@ -381,7 +382,9 @@ void Cleks_print_default(CleksToken token)
 	// TODO: probably best to do this with string builders instead
     if (token.loc.filename != NULL) printf("%s:", token.loc.filename);
 	CleksTokenType type = cleks_token_type(token.id);
-	printf("%d:%d %s: ", token.loc.row, token.loc.column, cleks_token_type_name(type));
+    CleksTokenIndex index = cleks_token_index(token.id);
+    bool keep_unknown = (type == CLEKS_UNKNOWN && index == 1);
+	printf("%d:%d %s: ", token.loc.row, token.loc.column, (keep_unknown)? "":cleks_token_type_name(type));
 	cleks_assert(type < CLEKS_TOKEN_TYPE_COUNT, "Invalid token type: %u!", type);
 	switch(type){
 		case CLEKS_WORD:
@@ -392,7 +395,10 @@ void Cleks_print_default(CleksToken token)
 		case CLEKS_FLOAT: 
 		case CLEKS_HEX: 
 		case CLEKS_BIN: printf("%.*s", token.end-token.start, token.start); break;
-		case CLEKS_UNKNOWN: printf("<%.*s>", token.end-token.start, token.start); break;
+		case CLEKS_UNKNOWN: {
+            if (keep_unknown){printf("%.*s", token.end-token.start, token.start);}
+            else {printf("<%.*s>", token.end-token.start, token.start);}
+        } break;
 		default: cleks_error("Uninplemented type in print: %s", cleks_token_type_name(type)); exit(1);
 	}
     putchar('\n');

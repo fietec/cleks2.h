@@ -1,2 +1,3 @@
 examples/json_lexer.exe
 examples/xml_lexer.exe
+examples/text_lexer.exe
