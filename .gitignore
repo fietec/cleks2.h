@@ -1,3 +1,6 @@
 examples/json_lexer.exe
 examples/xml_lexer.exe
 examples/text_lexer.exe
+examples/html_lexer.c
+examples/html_lexer.exe
+examples/test.html

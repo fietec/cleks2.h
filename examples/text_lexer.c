@@ -1,31 +1,32 @@
+#include <stdio.h>
 #define CLEKS_IMPLEMENTATION
 #include "../cleks2.h"
 #include "utils.h"
 
-CleksWhitespace text_whitespaces[] = {' ', '\n'};
-CleksSymbol text_symbols[] = {'.', ',', '?', '!', '"', ':', ';'};
+CleksSymbol txt_symbols[] = {',', '.', '!', '?', ':', ';'};
+CleksWhitespace txt_whitespaces[] = {' ', '\n'};
 
-CleksConfig text_config = {
-    .symbols = text_symbols,
-    .symbol_count = CLEKS_ARR_LEN(text_symbols),
-    .whitespaces = text_whitespaces,
-    .whitespace_count = CLEKS_ARR_LEN(text_whitespaces),
-    .flags = CLEKS_FLAGS_KEEP_UNKNOWN
+CleksConfig txt_config = {
+    .symbols = txt_symbols,
+    .symbol_count = CLEKS_ARR_LEN(txt_symbols),
+    .whitespaces = txt_whitespaces,
+    .whitespace_count = CLEKS_ARR_LEN(txt_whitespaces)
 };
 
 int main(int argc, char **argv)
 {
-    cleks_assert(argc >= 2, "No input file provided!");
+    cleks_assert(argc > 1, "No input file provided!");
     char *filename = argv[1];
     char *content = read_entire_file(filename);
-    
-    Clekser clekser = Cleks_create(content, strlen(content), text_config, filename, NULL);
+    cleks_assert(content != NULL, "Failed to read file: %s", filename);
+    Clekser clekser = Cleks_create(content, strlen(content), txt_config, filename, NULL);
     
     CleksToken token;
     while (Cleks_next(&clekser, &token)){
-        Cleks_print(clekser, token);
+        if (cleks_token_type(token.id) == CLEKS_UNKNOWN){
+            Cleks_print(clekser, token);
+        }
     }
-    
     free(content);
     return 0;
 }
