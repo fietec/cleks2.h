@@ -2,8 +2,8 @@
 #define _CLEKS_H
 
 /*
-	cleks.h by Constantijn de Meer
-	Cleks is a lightweight and highly customizable general-purpose lexer purely written in C.
+	cleks2.h ((c) 2025 Constantijn de Meer)
+	Cleks2 is a lightweight and highly customizable general-purpose lexer purely written in C.
 	A custom config struct is used to define the features of a language or syntax.
 	This library does not dynamically allocate any memory.
 */
@@ -23,19 +23,17 @@
 #define CLEKS_VALUE_FORMAT "%.*s"
 #define CLEKS_LOC_EXPAND(loc) (loc).filename, (loc).row, (loc).column
 
-#define CLEKS_FLAGS_ALL_NUMS 0xf
-#define CLEKS_FLAGS_INTEGERS 0x1
-#define CLEKS_FLAGS_FLOATS 0x2
-#define CLEKS_FLAGS_HEX 0x4
-#define CLEKS_FLAGS_BIN 0x8
-#define CLEKS_FLAGS_KEEP_UNKNOWN 0x10
-#define CLEKS_FLAGS_DISABLE_UNKNOWN 0x20
-
-#define CLEKS_NO_LOC (CleksLoc) {0}
+#define CLEKS_FLAGS_ALL_NUMS 0xf           // enable all number parsing
+#define CLEKS_FLAGS_INTEGERS 0x1           // enable parsing of CLEKS_INTEGER
+#define CLEKS_FLAGS_FLOATS 0x2             // enable parsing of CLEKS_FLOAT
+#define CLEKS_FLAGS_HEX 0x4                // enable parsing of CLEKS_HEX
+#define CLEKS_FLAGS_BIN 0x8                // enable parsing of CLEKS_BIN
+#define CLEKS_FLAGS_KEEP_UNKNOWN 0x10      // do not mark CLEKS_UNKNOWN when printing using Cleks_print_default
+#define CLEKS_FLAGS_DISABLE_UNKNOWN 0x20   // do not allow CLEKS_UNKNOWN, throw error instead
 
 /* Debugging */
 #define cleks_info(msg, ...) (printf("%s%s:%d: " msg CLEKS_ANSI_END "\n", CLEKS_ANSI_RGB(255, 255, 255), __FILE__, __LINE__, ## __VA_ARGS__))
-#ifdef CLEKS_DEBUG
+#ifdef CLEKS_DEBUG // define this to enable debugging messages using cleks_debug
 #define cleks_debug(msg, ...) (printf("%s%s:%d: [DEBUG] " msg CLEKS_ANSI_END "\n", CLEKS_ANSI_RGB(255, 124, 0), __FILE__, __LINE__, ## __VA_ARGS__))
 #else
 #define cleks_debug(msg, ...) (0)
@@ -53,34 +51,42 @@
 #define cleks__is_special(c) ((c) == '\0' || (c) == EOF)
 
 /* User macros */
-// #define cleks_token_type(token) (CleksTokenTypeNames[(uint64_t)(token)])
+// extract the CleksTokenType from the id of a token
 #define cleks_token_type(id) ((CleksTokenType) (((CleksTokenID)(id)) >> 32))
+// get the string name of a CleksTokenType
 #define cleks_token_type_name(type) (CleksTokenTypeNames[(CleksTokenID)(type)])
+// extract the CleksTokenIndex from the id of a token
 #define cleks_token_index(id) (CleksTokenIndex)((id) & 0xFFFFFFFF)
+// buid a CleksTokenID from a type and index
 #define cleks_token_id(type, index) ((CleksTokenID) ((CleksTokenID) (type) << 32) | ((CleksTokenIndex)(index)))
+// just a shorthand for accesing the string value of a token
 #define cleks_token_value(token) (token).start
+// calculate the string length of a token in the original buffer
 #define cleks_token_value_length(token) ((token).end - (token).start)
 
+// used with cleks_token_id(type, index) if no index is supposed to be defined
 #define CLEKS_ANY_INDEX 0xFFFFFFFF
 
 /* Type definitions */
-typedef const char CleksSymbol;
-typedef const char* CleksWord;
-typedef const char CleksWhitespace;
+typedef const char CleksSymbol;     // CLEKS_SYMBOL 
+typedef const char* CleksWord;      // CLEKS_WORD
+typedef const char CleksWhitespace; // token delimeters to be ignored
 
+// the overall type of a token
 typedef enum{
-	CLEKS_WORD,
-	CLEKS_SYMBOL,
-	CLEKS_STRING,
-    CLEKS_FIELD,
-	CLEKS_INTEGER,
-	CLEKS_FLOAT,
-	CLEKS_HEX,
-	CLEKS_BIN,
-	CLEKS_UNKNOWN,
-	CLEKS_TOKEN_TYPE_COUNT
+	CLEKS_WORD,             // word literals
+	CLEKS_SYMBOL,           // character literals
+	CLEKS_STRING,           // region within character delimeters
+    CLEKS_FIELD,            // region within string delimeters
+	CLEKS_INTEGER,          // decimal integers
+	CLEKS_FLOAT,            // floating pointer numbers
+	CLEKS_HEX,              // heximal integers
+	CLEKS_BIN,              // binary integers
+	CLEKS_UNKNOWN,          // unknown literals not within CLEKS_WORD
+	CLEKS_TOKEN_TYPE_COUNT  // not a type, the amount of types
 } CleksTokenType;
 
+// Printing names for each TokenType
 const char* CleksTokenTypeNames[] = {
 	[CLEKS_WORD] = "Word",
 	[CLEKS_SYMBOL] "Symbol",
@@ -95,55 +101,65 @@ const char* CleksTokenTypeNames[] = {
 
 _Static_assert(CLEKS_TOKEN_TYPE_COUNT == CLEKS_ARR_LEN(CleksTokenTypeNames), "CleksTokenTypeNames out of sync !");
 
+// the original location of a token in the buffer
 typedef struct{
 	size_t row;
 	size_t column;
 	char *filename;
 } CleksLoc;
 
-typedef uint64_t CleksTokenID;
+// the index of a token within a type config
 typedef uint32_t CleksTokenIndex;
+// a mask containing the CleksTokenType and CleksTokenIndex
+typedef uint64_t CleksTokenID;
 
+// an extracted token
 typedef struct{
-	CleksTokenID id;
-	CleksLoc loc;
-	char *start;
-	char *end;
+	CleksTokenID id; // the type and index of a token
+	CleksLoc loc;    // the token's location in the buffer
+	char *start;     // pointer to the start of the token within the buffer
+	char *end;       // pointer to the end of the token within the buffer
 } CleksToken;
 
+// a function used for printing a token representation
 typedef void (*CleksPrintFn) (CleksToken);
 
+// a region within which everything is ignored
 typedef struct{
-	char *start_del;
-	char *end_del;
+	char *start_del;  // start delimeter 
+	char *end_del;    // end delimeter
 } CleksComment;
 
+// a character string within char delimeters
 typedef struct{
-	char start_del;
-	char end_del;
+	char start_del;   // start delimeter
+	char end_del;     // end delimeter
 } CleksString;
 
+// a character string within string delimeters
 typedef struct{
     char *prefix;
     char *suffix;
 } CleksField;
 
+// config structure containing all custom sub-type definitions
 typedef struct{
-	CleksWord *words;
-	size_t word_count;
-	CleksSymbol *symbols;
+	CleksWord *words;             // definitions of CLEKS_WORD
+	size_t word_count;          
+	CleksSymbol *symbols;         // definitions of CLEKS_SYMBOL
 	size_t symbol_count;
-	CleksString *strings;
+	CleksString *strings;         // definitions of CLEKS_STRING
 	size_t string_count;
-    CleksField *fields;
+    CleksField *fields;           // definitions of CLEKS_FIELD
     size_t field_count;
-	CleksComment *comments;
+	CleksComment *comments;       // definitions of ignored regions
 	size_t comment_count;
-	CleksWhitespace *whitespaces;
+	CleksWhitespace *whitespaces; // definitiosn of ignored characters
 	size_t whitespace_count;
-	uint8_t flags;
+	uint8_t flags;                // additional lexing rules
 } CleksConfig;
 
+// the lexing structure containing runtime lexing information
 typedef struct{
 	char *buffer;
 	size_t buffer_size;
@@ -156,11 +172,17 @@ typedef struct{
 /* Function declarations */
 
 // 'public' functions
+// initialization of a Clekser structure
 Clekser Cleks_create(char *buffer, size_t buffer_size, CleksConfig config, char *filename, CleksPrintFn print_fn);
+// retreive the next token, returns `true` on success
 bool Cleks_next(Clekser *clekser, CleksToken *token);
+// retreive the next token and fail when not of specified type  
 bool Cleks_expect(Clekser *clekser, CleksToken *token, CleksTokenID id);
+// extract the content of a token into seperate buffer
 bool Cleks_extract(CleksToken *token, char *buffer, size_t buffer_size);
+// use the print dialog associated with the Clekser to print a token
 void Cleks_print(Clekser clekser, CleksToken token);
+// the default print dialog
 void Cleks_print_default(Clekser clekser, CleksToken token);
 
 // 'private' functions
@@ -183,7 +205,7 @@ bool Cleks__str_is_bin(char *s, char *e);
 #endif // _CLEKS_H
 
 /* 
-	cleks.c 
+	cleks2.c 
 	define ClEKS_IMPLEMENTATION to gain access to the function implementations
 */
 
@@ -533,7 +555,7 @@ bool Cleks__starts_with(Clekser *clekser, char *str)
 {
 	cleks_assert(clekser != NULL, "Invalid arguments clekser:%p, str:%p", clekser, str);
 	char *curr = clekser->buffer + clekser->index;
-	for (size_t i=0; i<strlen(str); ++i, ++curr){
+	for (size_t i=0, n=strlen(str); i<n; ++i, ++curr){
 		if (clekser->index + i >= clekser->buffer_size || *curr != *(str+i)) return false;
 	}
 	return true;
@@ -573,7 +595,6 @@ bool Cleks__str_is_bin(char *s, char *e)
 	while (s < e){
 		char c = *s++;
 		if (c != '0' && c != '1') return false;
-		
 	}
 	return true;
 }
