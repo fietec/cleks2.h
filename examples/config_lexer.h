@@ -1,6 +1,6 @@
+#include <stdio.h>
 #define CLEKS_IMPLEMENTATION
 #include "../../cleks2.h"
-#include "../utils.h"
 
 typedef enum {
     CONFIG_SEP,
@@ -54,21 +54,3 @@ CleksConfig config_config = {
     .flags = CLEKS_FLAGS_ALL_NUMS,
     .print_fn = config_print
 };
-
-int main(int argc, char **argv)
-{
-    cleks_assert(argc > 1, "No input file provided!");
-    char *filename = argv[1];
-    char *content = read_entire_file(filename);
-    cleks_assert(content != NULL, "Failed to read file: %s", filename);
-    printf("\"%s\"\n", content);
-    Clekser clekser = Cleks_create(content, strlen(content), config_config, filename);
-    
-    CleksToken token;
-    while (Cleks_next(&clekser, &token)){
-        Cleks_print(clekser, token);
-    }
-    cleks_info("finished");
-    free(content);
-    return 0;
-}

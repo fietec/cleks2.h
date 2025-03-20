@@ -1,5 +1,4 @@
 #define CLEKS_IMPLEMENTATION
-#include "utils.h"
 #include "../cleks2.h"
 #include <stdio.h>
 
@@ -58,20 +57,6 @@ CleksWhitespace JsonWhitespaces[] = {
 	' ', '\n'
 };
 
-CleksConfig JsonConfig = {
-	.words = JsonWords,
-	.word_count = CLEKS_ARR_LEN(JsonWords),
-	.symbols = JsonSymbols,
-	.symbol_count = CLEKS_ARR_LEN(JsonSymbols),
-	.strings = JsonStrings,
-	.string_count = CLEKS_ARR_LEN(JsonStrings),
-	.comments = JsonComments,
-	.comment_count = CLEKS_ARR_LEN(JsonComments),
-	.whitespaces = JsonWhitespaces,
-	.whitespace_count = CLEKS_ARR_LEN(JsonWhitespaces),
-	.flags = CLEKS_FLAGS_ALL_NUMS | CLEKS_FLAGS_DISABLE_UNKNOWN
-};
-
 void json_print(CleksToken token)
 {
     if (token.loc.filename != NULL) printf("%s:", token.loc.filename);
@@ -93,17 +78,17 @@ void json_print(CleksToken token)
     putchar('\n');
 }
 
-int main(int argc, char **argv)
-{
-	cleks_assert(argc == 2, "Not enough parameters provided!");
-	char *filename = argv[1];
-	char *file_content = read_entire_file(filename);
-	Clekser clekser = Cleks_create(file_content, strlen(file_content), JsonConfig, filename, json_print);
-	CleksToken token;
-	
-	while (Cleks_next(&clekser, &token)){
-		Cleks_print(clekser, token);
-	}
-	// free(buffer);
-	return 0;
-}
+CleksConfig JsonConfig = {
+	.words = JsonWords,
+	.word_count = CLEKS_ARR_LEN(JsonWords),
+	.symbols = JsonSymbols,
+	.symbol_count = CLEKS_ARR_LEN(JsonSymbols),
+	.strings = JsonStrings,
+	.string_count = CLEKS_ARR_LEN(JsonStrings),
+	.comments = JsonComments,
+	.comment_count = CLEKS_ARR_LEN(JsonComments),
+	.whitespaces = JsonWhitespaces,
+	.whitespace_count = CLEKS_ARR_LEN(JsonWhitespaces),
+	.flags = CLEKS_FLAGS_ALL_NUMS | CLEKS_FLAGS_DISABLE_UNKNOWN,
+    .print_fn = json_print
+};
