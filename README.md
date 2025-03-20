@@ -16,7 +16,7 @@ It is the second iteration of [cleks.h](https://github.com/fietec/cleks.h).
     - [Tokens](#tokens)
         - [Token type](#token-type)
         - [Token index](#token-index)
-        - [Token loc](#token-loc))
+        - [Token loc](#token-loc)
     - [Config](#config)
     - [Words](#words)
     - [Symbols](#symbols)
@@ -44,14 +44,13 @@ It is the second iteration of [cleks.h](https://github.com/fietec/cleks.h).
 
 First create a [Clekser](#clekser) struct by calling 
 ```c 
-Clekser Cleks_create(char *buffer, size_t buffer_size, CleksConfig config, char *filename, CleksPrintFn print_fn);
+Clekser Cleks_create(char *buffer, size_t buffer_size, CleksConfig config, char *filename);
 ```
 Arguments:
 - `buffer` : [char*] the string buffer to lex
 - `buffer_size` : [size_t] the length of the buffer
 - `config` : [[CleksConfig](#config)] the configuration struct
 - `filename` : [`char*`] a filename indicating where the content of the buffer originated, only used when printing
-- `print_fn` : [`CleksPrintFn`] a custom function for printing tokens (*NULL* for `Cleks_print_default`)
 
 ### Configuration
 
@@ -71,6 +70,7 @@ typedef struct{
 	CleksWhitespace *whitespaces;
 	size_t whitespace_count;
 	uint8_t flags;
+    CleksPrintFn print_fn;
 } CleksConfig;
 ```
 
@@ -81,6 +81,7 @@ Currently, there are five customizable fields, each with a corresponding `_count
 - `strings` : [[CleksString*](#strings)] an array of string delimeter definitions
 - `whitespaces` : [[CleksWhitespace*](#whitespaces)] an array of whitespace delimeter definitions
 - `flags` : [uint8_t] a bit-mask containing further lexing instructions
+- `print_fn` : [`CleksPrintFn`] a custom function for printing tokens (*NULL* for `Cleks_print_default`)
 
 The created `CleksConfig` struct is simply assinged to a `Clekser` via `Cleks_create`, as seen above.
 #### Flags
@@ -119,7 +120,6 @@ typedef struct{
 	CleksLoc loc;
 	size_t index;
 	CleksConfig config;
-    CleksPrintFn print_fn;
 } Clekser;
 ```
 
@@ -193,6 +193,7 @@ typedef struct{
 	CleksWhitespace *whitespaces;
 	size_t whitespace_count;
 	uint8_t flags;
+    CleksPrintFn print_fn;
 } CleksConfig;
 ```
 ### Words
@@ -224,6 +225,11 @@ typedef struct{
 ### Whitespaces
 ```c 
 typedef const char CleksWhitespace;
+```
+
+### Printing Functions
+```c
+typedef void (*CleksPrintFn) (CleksToken);
 ```
 
 ### Functions

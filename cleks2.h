@@ -157,6 +157,7 @@ typedef struct{
 	CleksWhitespace *whitespaces; // definitiosn of ignored characters
 	size_t whitespace_count;
 	uint8_t flags;                // additional lexing rules
+    CleksPrintFn print_fn;
 } CleksConfig;
 
 // the lexing structure containing runtime lexing information
@@ -166,14 +167,13 @@ typedef struct{
 	CleksLoc loc;
 	size_t index;
 	CleksConfig config;
-    CleksPrintFn print_fn;
 } Clekser;
 
 /* Function declarations */
 
 // 'public' functions
 // initialization of a Clekser structure
-Clekser Cleks_create(char *buffer, size_t buffer_size, CleksConfig config, char *filename, CleksPrintFn print_fn);
+Clekser Cleks_create(char *buffer, size_t buffer_size, CleksConfig config, char *filename);
 // retreive the next token, returns `true` on success
 bool Cleks_next(Clekser *clekser, CleksToken *token);
 // retreive the next token and fail when not of specified type  
@@ -211,10 +211,10 @@ bool Cleks__str_is_bin(char *s, char *e);
 
 #ifdef CLEKS_IMPLEMENTATION
 
-Clekser Cleks_create(char *buffer, size_t buffer_size, CleksConfig config, char *filename, CleksPrintFn print_fn)
+Clekser Cleks_create(char *buffer, size_t buffer_size, CleksConfig config, char *filename)
 {
 	cleks_assert(buffer != NULL, "Invalid parameter buffer:%p", buffer);
-	return (Clekser) {.buffer = buffer, .buffer_size=buffer_size, .loc=(CleksLoc){1, 1, filename}, .index=0, .config=config, .print_fn=print_fn};
+	return (Clekser) {.buffer = buffer, .buffer_size=buffer_size, .loc=(CleksLoc){1, 1, filename}, .index=0, .config=config};
 }
 
 bool Cleks_next(Clekser *clekser, CleksToken *token)
@@ -394,7 +394,7 @@ bool Cleks_extract(CleksToken *token, char *buffer, size_t buffer_size)
 		snprintf(buffer, pw-temp_buffer+2, "%s", temp_buffer);
 	}
 	else{
-		sprintf(buffer, "%.*s\0", value_len, token->start);
+		sprintf(buffer, "%.*s", value_len, token->start);
 	}
 	return true;
 }
@@ -428,8 +428,8 @@ void Cleks_print_default(Clekser clekser, CleksToken token)
 
 void Cleks_print(Clekser clekser, CleksToken token)
 {
-	if (clekser.print_fn != NULL){
-        clekser.print_fn(token);
+	if (clekser.config.print_fn != NULL){
+        clekser.config.print_fn(token);
     }
     else{
         Cleks_print_default(clekser, token);
