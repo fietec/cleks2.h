@@ -1,6 +1,6 @@
 #include <stdio.h>
 #define CLEKS_IMPLEMENTATION
-#include "../../cleks2.h"
+#include "../cleks2.h"
 
 typedef enum {
     CONFIG_SEP,
