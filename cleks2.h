@@ -1,12 +1,30 @@
+/* 
+    =========================================
+    cleks2.h <https://github.com/fietec/cleks2.h>
+    =========================================
+    Copyright (c) 2025 Constantijn de Meer
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+*/
+
 #ifndef _CLEKS_H
 #define _CLEKS_H
-
-/*
-	cleks2.h ((c) 2025 Constantijn de Meer)
-	Cleks2 is a lightweight and highly customizable general-purpose lexer purely written in C.
-	A custom config struct is used to define the features of a language or syntax.
-	This library does not dynamically allocate any memory.
-*/
 
 #include <stdio.h>
 #include <stdlib.h>
