@@ -196,6 +196,8 @@ Clekser Cleks_create(char *buffer, size_t buffer_size, CleksConfig config, char 
 bool Cleks_next(Clekser *clekser, CleksToken *token);
 // retreive the next token and fail when not of specified type  
 bool Cleks_expect(Clekser *clekser, CleksToken *token, CleksTokenID id);
+// retreive the next token but do not consume it 
+bool Cleks_peak(Clekser *clekser, CleksToken *token)
 // extract the content of a token into seperate buffer
 bool Cleks_extract(CleksToken *token, char *buffer, size_t buffer_size);
 // use the print dialog associated with the Clekser to print a token
@@ -371,6 +373,12 @@ bool Cleks_expect(Clekser *clekser, CleksToken *token, CleksTokenID id)
 	}
 	memcpy(token, &t_token, sizeof(CleksToken));
 	return true;
+}
+
+bool Cleks_peak(Clekser *clekser, CleksToken *token)
+{
+    Clekser temp_clekser = *clekser;
+    return Cleks_next(&temp_clekser, token);
 }
 
 bool Cleks_extract(CleksToken *token, char *buffer, size_t buffer_size)
